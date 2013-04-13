@@ -8,7 +8,7 @@ PBL_APP_INFO(MY_UUID,
              "Flight", "Emile Victor",
              1, 0, /* App version */
              DEFAULT_MENU_ICON,
-             APP_INFO_STANDARD_APP);
+             APP_INFO_WATCH_FACE);
 
 Window window;
 TextLayer zuluHeader;
@@ -19,6 +19,8 @@ TextLayer flightTimeHeader;
 TextLayer flightTime;
 bool timerHasStarted = false;
 PblTm initialFlightTime;
+BmpContainer background_image_container;
+bool hasVibed = false;
 
 
 
@@ -31,8 +33,12 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
   static char flightTimeHeaderText[] = "flight time";
   static char flightTimeText[25];
   strcpy(flightTimeText,"xx");
+  int GMTOffset = -11;
 
-  int GMTOffset = 10;
+  //Set the header text for static headers.
+  text_layer_set_text(&localHeader, localHeaderText);
+  text_layer_set_text(&zuluHeader, zuluHeaderText);
+  text_layer_set_text(&flightTimeHeader, flightTimeHeaderText);
 
 
 
@@ -69,6 +75,7 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
   if (!timerHasStarted)
   {
     memcpy(&initialFlightTime,t->tick_time,sizeof(initialFlightTime));
+    timerHasStarted = true;
     //initialFlightTime = t->tick_time;
   } else {
     int totalElapsedMinutes = 0;
@@ -97,7 +104,27 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
       }
       t->tick_time->tm_min = totalElapsedMinutes;
       string_format_time(flightTimeText, sizeof(flightTimeText), "%M", t->tick_time);
-      strcat(flightTimeText, " minutes");
+      if (totalElapsedMinutes == 1)
+      {
+        strcat(flightTimeText, " minute");
+      } else if (totalElapsedMinutes == 0)
+      {
+        strcpy(flightTimeText, "--Ascent--");
+      } else {
+        strcat(flightTimeText, " minutes");
+      }
+
+      //At the 30 minute mark, alert the pilot to check tanks.
+      if ((totalElapsedMinutes%30 == 0)&&(totalElapsedMinutes != 0)&&(hasVibed == false))
+      {
+        vibes_long_pulse();
+        hasVibed = true;
+      } else if ((totalElapsedMinutes%30 == 0)&&(totalElapsedMinutes != 0)) {
+        hasVibed = false;
+      } else {
+        hasVibed = false;
+      }
+      
 
   }
 
@@ -112,6 +139,63 @@ void handle_init(AppContextRef ctx) {
 
   window_init(&window, "Flight");
   window_stack_push(&window, true /* Animated */);
+
+  resource_init_current_app(&APP_RESOURCES);
+
+  window_set_background_color(&window, GColorBlack);
+
+  bmp_init_container(RESOURCE_ID_IMAGE_BACKGROUND, &background_image_container);
+
+  layer_add_child(&window.layer, &background_image_container.layer.layer);
+
+
+  //Local header
+  text_layer_init(&localHeader, window.layer.frame);
+  layer_set_frame(&localHeader.layer, GRect(15,9,114-8,168-8));
+  text_layer_set_text_color(&localHeader, GColorWhite);
+  text_layer_set_background_color(&localHeader, GColorClear);
+  text_layer_set_font(&localHeader, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  layer_add_child(&window.layer, &localHeader.layer);
+
+  //Local text
+  text_layer_init(&localTime, window.layer.frame);
+  layer_set_frame(&localTime.layer, GRect(15,25,114-8,168-8));
+  text_layer_set_text_color(&localTime, GColorWhite);
+  text_layer_set_background_color(&localTime, GColorClear);
+  text_layer_set_font(&localTime, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  layer_add_child(&window.layer, &localTime.layer);
+
+  //Zulu header
+  text_layer_init(&zuluHeader, window.layer.frame);
+  layer_set_frame(&zuluHeader.layer, GRect(15,50,114-8,168-8));
+  text_layer_set_text_color(&zuluHeader, GColorWhite);
+  text_layer_set_background_color(&zuluHeader, GColorClear);
+  text_layer_set_font(&zuluHeader, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  layer_add_child(&window.layer, &zuluHeader.layer);
+
+  //Zulu text
+  text_layer_init(&zuluTime, window.layer.frame);
+  layer_set_frame(&zuluTime.layer, GRect(15,65,114-8,168-8));
+  text_layer_set_text_color(&zuluTime, GColorWhite);
+  text_layer_set_background_color(&zuluTime, GColorClear);
+  text_layer_set_font(&zuluTime, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  layer_add_child(&window.layer, &zuluTime.layer);
+
+  //Elapsed header
+  text_layer_init(&flightTimeHeader, window.layer.frame);
+  layer_set_frame(&flightTimeHeader.layer, GRect(15,90,114-8,168-8));
+  text_layer_set_text_color(&flightTimeHeader, GColorWhite);
+  text_layer_set_background_color(&flightTimeHeader, GColorClear);
+  text_layer_set_font(&flightTimeHeader, fonts_get_system_font(FONT_KEY_GOTHIC_18));
+  layer_add_child(&window.layer, &flightTimeHeader.layer);
+
+  //Elapsed text
+  text_layer_init(&flightTime, window.layer.frame);
+  layer_set_frame(&flightTime.layer, GRect(15,105,114-8,168-8));
+  text_layer_set_text_color(&flightTime, GColorWhite);
+  text_layer_set_background_color(&flightTime, GColorClear);
+  text_layer_set_font(&flightTime, fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD));
+  layer_add_child(&window.layer, &flightTime.layer);
 }
 
 

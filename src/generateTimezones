@@ -1,0 +1,27 @@
+#!/bin/bash
+
+for i in `seq -11 11`;
+do
+
+	sed -i '' -e "s/int GMTOffset = -11;/int GMTOffset = ${i};/g" flight.c
+
+
+	#build
+	cd ..
+	./waf build
+	echo "WAF BUILDING ${i}"
+	cd src
+
+
+	sed -i '' -e "s/int GMTOffset = ${i};/int GMTOffset = -11;/g" flight.c
+
+	#Change the name of the output file.
+	if ["$i" -gt 0]
+	then
+		mv ../build/flight.pbw ../build/flight+${i}.pbw 
+	else
+		mv ../build/flight.pbw ../build/flight${i}.pbw 
+	fi
+	
+
+done
