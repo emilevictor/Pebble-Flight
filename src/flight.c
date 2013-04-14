@@ -33,7 +33,10 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
   static char flightTimeHeaderText[] = "flight time";
   static char flightTimeText[25];
   strcpy(flightTimeText,"xx");
+
+  //Change me to change GMT offset.
   int GMTOffset = -11;
+  bool addHalfHourOffset = true;
 
   //Set the header text for static headers.
   text_layer_set_text(&localHeader, localHeaderText);
@@ -55,8 +58,28 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
   if (convertingHour < 0)
   {
     convertingHour = 24 + convertingHour;
+  } else if (convertingHour > 24)
+  {
+    convertingHour = convertingHour - 24;
   }
 
+  if (addHalfHourOffset)
+  {
+    if ((t->tick_time->tm_min + 30)>60)
+    {
+      convertingHour += 1;
+      if (convertingHour < 0)
+      {
+        convertingHour = 24 + convertingHour;
+      } else if (convertingHour > 24)
+      {
+        convertingHour = convertingHour - 24;
+      }
+      gmtTime.tm_min = (t->tick_time->tm_min + 30)-60;
+    } else {
+      gmtTime.tm_min = t->tick_time->tm_min + 30;
+    }
+  }
   gmtTime.tm_hour = convertingHour;
 
 
@@ -120,7 +143,7 @@ void handle_second_tick(AppContextRef ctx, PebbleTickEvent *t)
         vibes_long_pulse();
         hasVibed = true;
       } else if ((totalElapsedMinutes%30 == 0)&&(totalElapsedMinutes != 0)) {
-        hasVibed = false;
+        hasVibed = true;
       } else {
         hasVibed = false;
       }
